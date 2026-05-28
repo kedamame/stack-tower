@@ -513,6 +513,36 @@ export function StackTowerGame() {
             <span style={label}>Game Over</span>
           </div>
 
+          {/* Disconnect wallet */}
+          {walletAddress && (
+            <div style={{ position: 'absolute', top: 24, right: 36, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: 'rgba(255,255,255,0.38)', fontSize: 11, fontFamily: font, letterSpacing: '0.06em' }}>
+                {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+              </span>
+              <button
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  borderRadius: 9999,
+                  color: 'rgba(255,255,255,0.45)',
+                  fontSize: 11,
+                  fontFamily: font,
+                  padding: '4px 10px',
+                  cursor: 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setWalletAddress(null);
+                  setTxState('idle');
+                  setTxHash(null);
+                }}
+              >
+                Disconnect
+              </button>
+            </div>
+          )}
+
           {/* Big score */}
           <div style={{ marginBottom: 8 }}>
             <span style={label}>Final Score</span>
@@ -566,18 +596,6 @@ export function StackTowerGame() {
                 >
                   {walletConnecting ? 'Connecting...' : 'Connect Wallet'}
                 </button>
-              )}
-
-              {/* Connected address */}
-              {walletAddress && txState === 'idle' && (
-                <span style={{
-                  color: 'rgba(255,255,255,0.38)',
-                  fontSize: 12,
-                  fontFamily: font,
-                  letterSpacing: '0.06em',
-                }}>
-                  {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-                </span>
               )}
 
               {/* Step 2: Record score */}
