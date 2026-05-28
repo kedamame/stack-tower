@@ -2,11 +2,10 @@ import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
 
-const BH = 20;
-const GAP = 3;
-
-// Widths from top (narrow) to bottom (wide)
-const WIDTHS = [68, 88, 108, 130, 154];
+// 4 thick blocks — fewer, bolder, reads clearly at small display sizes
+const WIDTHS = [160, 128, 96, 64];
+const BH = 30;
+const GAP = 4;
 
 export async function GET() {
   return new ImageResponse(
@@ -18,82 +17,31 @@ export async function GET() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          justifyContent: 'center',
           background: '#000000',
-          paddingTop: 26,
+          gap: GAP,
         }}
       >
-        {/* Moving block — semi-transparent, shifted right */}
+        {/* "STACK" label above the tower */}
         <div
           style={{
             display: 'flex',
-            width: WIDTHS[0],
-            height: BH,
-            background: 'rgba(255,255,255,0.45)',
-            marginLeft: 28,
-            marginBottom: GAP,
-          }}
-        />
-
-        {/* Placed blocks: narrow (top) → wide (floor) */}
-        <div
-          style={{
-            display: 'flex',
-            width: WIDTHS[0],
-            height: BH,
-            background: '#FFFFFF',
-            marginBottom: GAP,
-          }}
-        />
-        <div
-          style={{
-            display: 'flex',
-            width: WIDTHS[1],
-            height: BH,
-            background: '#CCCCCC',
-            marginBottom: GAP,
-          }}
-        />
-        <div
-          style={{
-            display: 'flex',
-            width: WIDTHS[2],
-            height: BH,
-            background: '#FFFFFF',
-            marginBottom: GAP,
-          }}
-        />
-        <div
-          style={{
-            display: 'flex',
-            width: WIDTHS[3],
-            height: BH,
-            background: '#CCCCCC',
-            marginBottom: GAP,
-          }}
-        />
-        <div
-          style={{
-            display: 'flex',
-            width: WIDTHS[4],
-            height: BH,
-            background: '#FFFFFF',
-            marginBottom: 16,
-          }}
-        />
-
-        {/* Label */}
-        <div
-          style={{
-            display: 'flex',
-            color: 'rgba(255,255,255,0.75)',
-            fontSize: 13,
+            color: '#FFFFFF',
+            fontSize: 28,
             fontWeight: 900,
             fontFamily: 'serif',
-            letterSpacing: 3,
+            letterSpacing: 6,
+            marginBottom: 10,
           }}
         >
-          STACK TOWER
+          STACK
         </div>
+
+        {/* Narrow block at top → wide floor at bottom */}
+        <div style={{ display: 'flex', width: WIDTHS[3], height: BH, background: '#FFFFFF' }} />
+        <div style={{ display: 'flex', width: WIDTHS[2], height: BH, background: '#CCCCCC' }} />
+        <div style={{ display: 'flex', width: WIDTHS[1], height: BH, background: '#FFFFFF' }} />
+        <div style={{ display: 'flex', width: WIDTHS[0], height: BH, background: '#CCCCCC' }} />
       </div>
     ),
     { width: 200, height: 200 },
