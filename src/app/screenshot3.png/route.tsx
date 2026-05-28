@@ -1,9 +1,7 @@
 // Screenshot 3: Game Over screen (1284x2778)
 import { ImageResponse } from 'next/og';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const maxDuration = 15;
+export const runtime = 'edge';
 
 export async function GET() {
   return new ImageResponse(

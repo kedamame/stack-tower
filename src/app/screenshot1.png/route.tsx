@@ -1,9 +1,7 @@
 // Screenshot 1: Start screen (1284x2778)
 import { ImageResponse } from 'next/og';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const maxDuration = 15;
+export const runtime = 'edge';
 
 export async function GET() {
   const blockWidths = [600, 500, 410, 320, 240, 160, 80];

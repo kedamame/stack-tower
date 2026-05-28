@@ -2,9 +2,7 @@
 // Simulates a mid-game state at score=12 using pure flex layout (no position:absolute)
 import { ImageResponse } from 'next/og';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const maxDuration = 15;
+export const runtime = 'edge';
 
 // Simulated placed blocks (widths only – display is centered via flex)
 const BLOCK_WIDTHS = [600, 560, 510, 470, 470, 430, 390, 390, 355, 320, 320, 288, 260];
