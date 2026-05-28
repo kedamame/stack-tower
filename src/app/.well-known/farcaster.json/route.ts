@@ -7,9 +7,9 @@ export async function GET() {
     accountAssociation: {
       // Set these env vars after running the domain association tool at:
       // https://warpcast.com/~/developers/mini-apps
-      header: process.env.FARCASTER_HEADER ?? '',
-      payload: process.env.FARCASTER_PAYLOAD ?? '',
-      signature: process.env.FARCASTER_SIGNATURE ?? '',
+      header: process.env.FARCASTER_HEADER ?? 'eyJmaWQiOjIxMTE4OSwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweEFBZTM5NEQ1MWUyYzBhOTczNWUwQmI2NzdFMTJmMjE1MjVCRWI1NTIifQ',
+      payload: process.env.FARCASTER_PAYLOAD ?? 'eyJkb21haW4iOiJzdGFjay10b3dlci1maXZlLnZlcmNlbC5hcHAifQ',
+      signature: process.env.FARCASTER_SIGNATURE ?? 'MoTUGtNdcqeF9aJ9u0brFrGIvLS1DoepidklRCNoDbsG3fKPK9eHjfvvIBIreUTaly555snls3NjzZcKtrlYJBw=',
     },
     miniapp: {
       version: '1',
