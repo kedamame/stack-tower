@@ -74,6 +74,8 @@ export function StackTowerGame() {
   const [score, setScore] = useState(0);
   const [txState, setTxState] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [walletConnecting, setWalletConnecting] = useState(false);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   const syncSize = useCallback(() => {
@@ -295,6 +297,22 @@ export function StackTowerGame() {
     return () => ro.disconnect();
   }, [syncSize]);
 
+  // ── Connect wallet ────────────────────────────────────────────────────────
+  const handleConnectWallet = useCallback(async () => {
+    setWalletConnecting(true);
+    try {
+      const { sdk } = await import('@farcaster/miniapp-sdk');
+      const provider = sdk.wallet.ethProvider;
+      if (!provider) throw new Error('no provider');
+      const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
+      if (accounts[0]) setWalletAddress(accounts[0]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setWalletConnecting(false);
+    }
+  }, []);
+
   // ── Record score on-chain ─────────────────────────────────────────────────
   const handleRecordScore = useCallback(async () => {
     if (txState !== 'idle' && txState !== 'error') return;
@@ -323,7 +341,7 @@ export function StackTowerGame() {
         dataSuffix: DATA_SUFFIX,
       });
 
-      const [address] = await walletClient.getAddresses();
+      const address = (walletAddress ?? (await walletClient.getAddresses())[0]) as `0x${string}`;
       const hash = await walletClient.writeContract({
         account: address,
         address: CONTRACT_ADDRESS,
@@ -535,8 +553,35 @@ export function StackTowerGame() {
 
           {/* On-chain record – only shown when contract is deployed */}
           {process.env.NEXT_PUBLIC_CONTRACT_ADDRESS && (
-            <div style={{ marginTop: 20 }}>
-              {txState !== 'success' && (
+            <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Step 1: Connect wallet */}
+              {!walletAddress && txState === 'idle' && (
+                <button
+                  style={{
+                    ...pillBtn(false),
+                    opacity: walletConnecting ? 0.55 : 1,
+                    pointerEvents: walletConnecting ? 'none' : 'auto',
+                  }}
+                  onPointerDown={(e) => { e.stopPropagation(); handleConnectWallet(); }}
+                >
+                  {walletConnecting ? 'Connecting...' : 'Connect Wallet'}
+                </button>
+              )}
+
+              {/* Connected address */}
+              {walletAddress && txState === 'idle' && (
+                <span style={{
+                  color: 'rgba(255,255,255,0.38)',
+                  fontSize: 12,
+                  fontFamily: font,
+                  letterSpacing: '0.06em',
+                }}>
+                  {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                </span>
+              )}
+
+              {/* Step 2: Record score */}
+              {walletAddress && txState !== 'success' && (
                 <button
                   style={{
                     ...pillBtn(false),
@@ -550,6 +595,8 @@ export function StackTowerGame() {
                   {txState === 'error' && 'Failed — Retry'}
                 </button>
               )}
+
+              {/* Success */}
               {txState === 'success' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <span style={{
