@@ -1,0 +1,13 @@
+
+> stack-tower@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1178ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 768ms (255 modules)
+ GET /splash.png 500 in 896ms

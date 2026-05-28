@@ -1,0 +1,20 @@
+
+> stack-tower@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1186ms
+ ○ Compiling / ...
+ ✓ Compiled / in 2.5s (968 modules)
+ GET / 200 in 2634ms
+ ○ Compiling /og-image.png ...
+ ✓ Compiled /og-image.png in 536ms (145 modules)
+ GET /og-image.png 200 in 702ms
+ ✓ Compiled /opengraph-image in 43ms (148 modules)
+ GET /opengraph-image 200 in 184ms
+ GET /og-image.png 200 in 117ms
+ GET /opengraph-image 200 in 27ms

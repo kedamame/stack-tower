@@ -1,0 +1,14 @@
+
+> stack-tower@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1356ms
+ ○ Compiling /splash.png ...
+ ✓ Compiled /splash.png in 581ms (145 modules)
+ GET /splash.png 200 in 726ms
+ GET /splash.png 200 in 13ms
