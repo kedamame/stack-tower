@@ -47,7 +47,7 @@ export async function GET() {
             bottom: 72,
           }}
         >
-          {[320, 270, 230, 185, 140, 90].map((w, i) => (
+          {[90, 140, 185, 230, 270, 320].map((w, i) => (
             <div
               key={i}
               style={{
