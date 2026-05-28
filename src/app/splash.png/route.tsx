@@ -85,10 +85,10 @@ export async function GET() {
         <div
           style={{
             display: 'flex',
-            color: 'rgba(255,255,255,0.42)',
-            fontSize: 12,
-            fontWeight: 700,
-            fontFamily: 'monospace',
+            color: 'rgba(255,255,255,0.75)',
+            fontSize: 13,
+            fontWeight: 900,
+            fontFamily: 'serif',
             letterSpacing: 3,
           }}
         >
