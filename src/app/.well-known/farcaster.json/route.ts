@@ -14,7 +14,7 @@ export async function GET() {
     miniapp: {
       version: '1',
       name: 'Stack Tower',
-      subtitle: 'Tap. Stack. How high can you go?',
+      subtitle: 'Tap. Stack. Beat your best.',
       description:
         'A one-tap block stacking game. Drop each block perfectly to keep your tower growing. Share your high score on Farcaster.',
       homeUrl: APP_URL,
@@ -32,7 +32,7 @@ export async function GET() {
       ],
       primaryCategory: 'games',
       tags: ['game', 'stack', 'arcade', 'farcaster'],
-      tagline: 'Tap to stack. How high can you go?',
+      tagline: 'Tap to drop. Stack to the top.',
       noindex: false,
       requiredChains: [],
       requiredCapabilities: [],
