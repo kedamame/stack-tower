@@ -72,6 +72,8 @@ export function StackTowerGame() {
   // Minimal React state – only for overlay rendering
   const [phase, setPhase] = useState<Phase>('idle');
   const [score, setScore] = useState(0);
+  const [txState, setTxState] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+  const [txHash, setTxHash] = useState<string | null>(null);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   const syncSize = useCallback(() => {
@@ -100,6 +102,8 @@ export function StackTowerGame() {
     g.score = 0;
     setPhase('playing');
     setScore(0);
+    setTxState('idle');
+    setTxHash(null);
   }, [syncSize]);
 
   // ── Tap to place ─────────────────────────────────────────────────────────
@@ -290,6 +294,51 @@ export function StackTowerGame() {
     if (wrapRef.current) ro.observe(wrapRef.current);
     return () => ro.disconnect();
   }, [syncSize]);
+
+  // ── Record score on-chain ─────────────────────────────────────────────────
+  const handleRecordScore = useCallback(async () => {
+    if (txState !== 'idle' && txState !== 'error') return;
+    setTxState('pending');
+    try {
+      const { sdk } = await import('@farcaster/miniapp-sdk');
+      const provider = sdk.wallet.ethProvider;
+      if (!provider) throw new Error('no wallet');
+
+      // Switch to Base mainnet (chainId 8453 = 0x2105)
+      try {
+        await provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x2105' }],
+        });
+      } catch { /* already on Base or wallet handles it */ }
+
+      const { createWalletClient, custom } = await import('viem');
+      const { base } = await import('viem/chains');
+      const { DATA_SUFFIX } = await import('@/lib/attribution');
+      const { CONTRACT_ADDRESS, LEADERBOARD_ABI } = await import('@/lib/contract');
+
+      const walletClient = createWalletClient({
+        chain: base,
+        transport: custom(provider as Parameters<typeof custom>[0]),
+        dataSuffix: DATA_SUFFIX,
+      });
+
+      const [address] = await walletClient.getAddresses();
+      const hash = await walletClient.writeContract({
+        account: address,
+        address: CONTRACT_ADDRESS,
+        abi: LEADERBOARD_ABI,
+        functionName: 'submitScore',
+        args: [BigInt(G.current.score)],
+      });
+
+      setTxHash(hash);
+      setTxState('success');
+    } catch (err) {
+      console.error(err);
+      setTxState('error');
+    }
+  }, [txState]);
 
   // ── Share on Farcaster ────────────────────────────────────────────────────
   const handleShare = useCallback(async () => {
@@ -483,6 +532,52 @@ export function StackTowerGame() {
               Share Score
             </button>
           </div>
+
+          {/* On-chain record – only shown when contract is deployed */}
+          {process.env.NEXT_PUBLIC_CONTRACT_ADDRESS && (
+            <div style={{ marginTop: 20 }}>
+              {txState !== 'success' && (
+                <button
+                  style={{
+                    ...pillBtn(false),
+                    opacity: txState === 'pending' ? 0.55 : 1,
+                    pointerEvents: txState === 'pending' ? 'none' : 'auto',
+                  }}
+                  onPointerDown={(e) => { e.stopPropagation(); handleRecordScore(); }}
+                >
+                  {txState === 'idle' && 'Record On-Chain'}
+                  {txState === 'pending' && 'Recording...'}
+                  {txState === 'error' && 'Failed — Retry'}
+                </button>
+              )}
+              {txState === 'success' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <span style={{
+                    color: 'rgba(255,255,255,0.55)',
+                    fontSize: 13,
+                    fontFamily: font,
+                    letterSpacing: '0.08em',
+                  }}>
+                    Score recorded on Base
+                  </span>
+                  {txHash && (
+                    <button
+                      style={{ ...pillBtn(false), fontSize: 13 }}
+                      onPointerDown={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          const { sdk } = await import('@farcaster/miniapp-sdk');
+                          await sdk.actions.openUrl(`https://basescan.org/tx/${txHash}`);
+                        } catch {}
+                      }}
+                    >
+                      View on Basescan
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
