@@ -1,4 +1,4 @@
-// Farcaster embed image (3:2 = 900x600) — same ratio as /opengraph-image
+// Farcaster embed image — 900x600 (3:2), matches in-game game-over aesthetic
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 
@@ -6,15 +6,26 @@ export const runtime = 'edge';
 
 function scoreFontSize(score: number): number {
   const d = String(score).length;
-  if (d <= 1) return 240;
-  if (d <= 2) return 190;
-  if (d <= 3) return 150;
-  return 120;
+  if (d <= 1) return 280;
+  if (d <= 2) return 230;
+  if (d <= 3) return 185;
+  return 148;
 }
 
 export async function GET(req: NextRequest) {
   const score = parseInt(req.nextUrl.searchParams.get('score') ?? '0', 10);
   const fs = scoreFontSize(score);
+
+  const label: Record<string, string | number> = {
+    display: 'flex',
+    color: 'rgba(255,255,255,0.38)',
+    fontSize: 15,
+    fontWeight: 700,
+    letterSpacing: 3,
+    fontFamily: 'sans-serif',
+    textTransform: 'uppercase',
+    whiteSpace: 'nowrap',
+  };
 
   return new ImageResponse(
     (
@@ -24,22 +35,83 @@ export async function GET(req: NextRequest) {
           height: '100%',
           display: 'flex',
           background: '#000000',
-          paddingTop: 56,
-          paddingBottom: 56,
-          paddingLeft: 64,
-          paddingRight: 64,
+          paddingTop: 60,
+          paddingBottom: 60,
+          paddingLeft: 72,
+          paddingRight: 72,
           alignItems: 'stretch',
         }}
       >
-        {/* ── Left column: score ──────────────────────────────────────── */}
+        {/* ── Left: score info (mirrors game-over overlay) ─────────── */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            width: 460,
+            width: 480,
             flexShrink: 0,
             overflow: 'hidden',
+          }}
+        >
+          {/* "Final Score" label — matches game label style */}
+          <div style={label}>Final Score</div>
+
+          {/* Score number + subtitle */}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div
+              style={{
+                display: 'flex',
+                color: '#FFFFFF',
+                fontSize: fs,
+                fontWeight: 900,
+                lineHeight: 0.88,
+                fontFamily: 'sans-serif',
+                letterSpacing: -4,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {String(score)}
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                color: 'rgba(255,255,255,0.38)',
+                fontSize: 20,
+                fontFamily: 'sans-serif',
+                marginTop: 14,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              blocks stacked
+            </div>
+          </div>
+
+          {/* Bottom tagline */}
+          <div
+            style={{
+              display: 'flex',
+              color: 'rgba(255,255,255,0.45)',
+              fontSize: 18,
+              fontFamily: 'sans-serif',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Can you beat me?
+          </div>
+        </div>
+
+        {/* ── Flexible gap ─────────────────────────────────────────── */}
+        <div style={{ display: 'flex', flex: 1 }} />
+
+        {/* ── Right: app label + tower illustration ────────────────── */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
+            width: 204,
+            flexShrink: 0,
           }}
         >
           {/* App name */}
@@ -49,94 +121,30 @@ export async function GET(req: NextRequest) {
               color: 'rgba(255,255,255,0.35)',
               fontSize: 13,
               fontWeight: 700,
-              letterSpacing: 8,
-              fontFamily: 'monospace',
+              letterSpacing: 6,
+              fontFamily: 'sans-serif',
+              textTransform: 'uppercase',
               whiteSpace: 'nowrap',
             }}
           >
-            STACK TOWER
+            Stack Tower
           </div>
 
-          {/* Score block */}
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div
-              style={{
-                display: 'flex',
-                color: 'rgba(255,255,255,0.35)',
-                fontSize: 14,
-                fontWeight: 700,
-                letterSpacing: 8,
-                fontFamily: 'monospace',
-                marginBottom: 6,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              SCORE
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                color: '#FFFFFF',
-                fontSize: fs,
-                fontWeight: 900,
-                lineHeight: 1,
-                fontFamily: 'serif',
-                letterSpacing: -3,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {String(score)}
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                color: 'rgba(255,255,255,0.35)',
-                fontSize: 14,
-                fontWeight: 700,
-                letterSpacing: 8,
-                fontFamily: 'monospace',
-                marginTop: 12,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              BLOCKS STACKED
-            </div>
-          </div>
-
-          {/* Tagline */}
+          {/* Tower blocks (narrow at top → wide at bottom) */}
           <div
             style={{
               display: 'flex',
-              color: 'rgba(255,255,255,0.45)',
-              fontSize: 18,
-              fontFamily: 'monospace',
-              whiteSpace: 'nowrap',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
             }}
           >
-            Can you beat me?
+            <div style={{ display: 'flex', width: 42,  height: 30, background: '#FFFFFF', marginBottom: 3 }} />
+            <div style={{ display: 'flex', width: 70,  height: 30, background: '#D0D0D0', marginBottom: 3 }} />
+            <div style={{ display: 'flex', width: 100, height: 30, background: '#FFFFFF', marginBottom: 3 }} />
+            <div style={{ display: 'flex', width: 128, height: 30, background: '#D0D0D0', marginBottom: 3 }} />
+            <div style={{ display: 'flex', width: 158, height: 30, background: '#FFFFFF', marginBottom: 3 }} />
+            <div style={{ display: 'flex', width: 188, height: 30, background: '#D0D0D0' }} />
           </div>
-        </div>
-
-        {/* ── Gap ─────────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flex: 1 }} />
-
-        {/* ── Right column: tower ──────────────────────────────────────── */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-end',
-            justifyContent: 'flex-end',
-            width: 248,
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ display: 'flex', width: 50,  height: 34, background: '#FFFFFF', marginBottom: 3 }} />
-          <div style={{ display: 'flex', width: 82,  height: 34, background: '#CCCCCC', marginBottom: 3 }} />
-          <div style={{ display: 'flex', width: 114, height: 34, background: '#FFFFFF', marginBottom: 3 }} />
-          <div style={{ display: 'flex', width: 148, height: 34, background: '#CCCCCC', marginBottom: 3 }} />
-          <div style={{ display: 'flex', width: 182, height: 34, background: '#FFFFFF', marginBottom: 3 }} />
-          <div style={{ display: 'flex', width: 220, height: 34, background: '#CCCCCC' }} />
         </div>
       </div>
     ),
