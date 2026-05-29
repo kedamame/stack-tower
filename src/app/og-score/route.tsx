@@ -2,7 +2,8 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
+export const maxDuration = 15;
 
 // Module-level cache survives across requests within the same edge worker
 let font400: ArrayBuffer | null = null;
@@ -12,17 +13,24 @@ async function loadInterFont(weight: 400 | 900): Promise<ArrayBuffer | null> {
   const cached = weight === 400 ? font400 : font900;
   if (cached) return cached;
   try {
-    // Ask Google Fonts for the CSS (Chrome UA → woff2 response)
-    const css = await fetch(
+    // Step 1: fetch Google Fonts CSS to get the current woff2 URL
+    const cssRes = await fetch(
       `https://fonts.googleapis.com/css2?family=Inter:wght@${weight}&display=swap`,
-      { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' } },
-    ).then(r => r.text());
-
-    // Extract the first woff2 URL
+      {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        signal: AbortSignal.timeout(6000),
+      },
+    );
+    const css = await cssRes.text();
     const match = css.match(/url\(([^)]+\.woff2)\)/);
     if (!match) return null;
 
-    const data = await fetch(match[1]).then(r => r.arrayBuffer());
+    // Step 2: fetch the actual font binary
+    const fontRes = await fetch(match[1], { signal: AbortSignal.timeout(6000) });
+    const data = await fontRes.arrayBuffer();
     if (weight === 400) font400 = data;
     else font900 = data;
     return data;
