@@ -1,14 +1,27 @@
 // Farcaster embed image — 900x600 (3:2), matches in-game game-over aesthetic
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { inter400, inter900 } from './fonts';
+import { readFile } from 'fs/promises';
 
 export const runtime = 'nodejs';
 export const maxDuration = 10;
 
-// Fonts are base64-embedded in fonts.ts — no fs/network dependency
-const font400 = inter400.buffer as ArrayBuffer;
-const font900 = inter900.buffer as ArrayBuffer;
+// Cache font ArrayBuffers per process instance
+let font400Cache: ArrayBuffer | undefined;
+let font900Cache: ArrayBuffer | undefined;
+
+async function loadFonts() {
+  if (!font400Cache) {
+    // new URL('./file', import.meta.url) causes webpack to bundle the file
+    const buf = await readFile(new URL('./inter-400.woff2', import.meta.url));
+    font400Cache = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+  }
+  if (!font900Cache) {
+    const buf = await readFile(new URL('./inter-900.woff2', import.meta.url));
+    font900Cache = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+  }
+  return { font400: font400Cache, font900: font900Cache };
+}
 
 function scoreFontSize(score: number): number {
   const d = String(score).length;
@@ -22,6 +35,7 @@ export async function GET(req: NextRequest) {
   const score = parseInt(req.nextUrl.searchParams.get('score') ?? '0', 10);
   const fs = scoreFontSize(score);
 
+  const { font400, font900 } = await loadFonts();
   const fonts = [
     { name: 'Inter', data: font400, weight: 400 as const, style: 'normal' as const },
     { name: 'Inter', data: font900, weight: 900 as const, style: 'normal' as const },
