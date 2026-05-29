@@ -28,6 +28,24 @@ export async function generateMetadata({
       description,
       images: [ogImage],
     },
+    // Override root layout's fc:miniapp so Farcaster uses the score image
+    other: {
+      'fc:miniapp': JSON.stringify({
+        version: '1',
+        imageUrl: ogImage,
+        button: {
+          title: 'Play Stack Tower',
+          action: {
+            type: 'launch_miniapp',
+            name: 'Stack Tower',
+            url: APP_URL,
+            splashImageUrl: `${APP_URL}/splash.png`,
+            splashBackgroundColor: '#000000',
+          },
+        },
+      }),
+      'base:app_id': '6a180c5fa104516d71898a64',
+    },
   };
 }
 
