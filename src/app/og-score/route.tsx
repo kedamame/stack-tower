@@ -5,32 +5,17 @@ import { NextRequest } from 'next/server';
 export const runtime = 'nodejs';
 export const maxDuration = 15;
 
-// Module-level cache survives across requests within the same edge worker
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+
+// Module-level cache (per Node.js process)
 let font400: ArrayBuffer | null = null;
 let font900: ArrayBuffer | null = null;
 
-async function loadInterFont(weight: 400 | 900): Promise<ArrayBuffer | null> {
-  const cached = weight === 400 ? font400 : font900;
-  if (cached) return cached;
+async function loadFont(weight: 400 | 900): Promise<ArrayBuffer | null> {
+  if (weight === 400 && font400) return font400;
+  if (weight === 900 && font900) return font900;
   try {
-    // Step 1: fetch Google Fonts CSS to get the current woff2 URL
-    const cssRes = await fetch(
-      `https://fonts.googleapis.com/css2?family=Inter:wght@${weight}&display=swap`,
-      {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        },
-        signal: AbortSignal.timeout(6000),
-      },
-    );
-    const css = await cssRes.text();
-    const match = css.match(/url\(([^)]+\.woff2)\)/);
-    if (!match) return null;
-
-    // Step 2: fetch the actual font binary
-    const fontRes = await fetch(match[1], { signal: AbortSignal.timeout(6000) });
-    const data = await fontRes.arrayBuffer();
+    const data = await fetch(`${APP_URL}/fonts/inter-${weight}.woff2`).then(r => r.arrayBuffer());
     if (weight === 400) font400 = data;
     else font900 = data;
     return data;
@@ -51,10 +36,7 @@ export async function GET(req: NextRequest) {
   const score = parseInt(req.nextUrl.searchParams.get('score') ?? '0', 10);
   const fs = scoreFontSize(score);
 
-  const [f400, f900] = await Promise.all([
-    loadInterFont(400),
-    loadInterFont(900),
-  ]);
+  const [f400, f900] = await Promise.all([loadFont(400), loadFont(900)]);
 
   const fonts = [
     ...(f400 ? [{ name: 'Inter', data: f400, weight: 400 as const, style: 'normal' as const }] : []),
