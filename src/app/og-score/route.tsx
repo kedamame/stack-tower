@@ -1,22 +1,14 @@
 // Farcaster embed image — 900x600 (3:2), matches in-game game-over aesthetic
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { inter400, inter900 } from './fonts';
 
 export const runtime = 'nodejs';
 export const maxDuration = 10;
 
-// Read fonts synchronously at module init — cached for process lifetime.
-// public/fonts/ is included in this function's bundle via outputFileTracingIncludes.
-const font400 = (() => {
-  try { return readFileSync(join(process.cwd(), 'public/fonts/inter-400.woff2')); }
-  catch { return null; }
-})();
-const font900 = (() => {
-  try { return readFileSync(join(process.cwd(), 'public/fonts/inter-900.woff2')); }
-  catch { return null; }
-})();
+// Fonts are base64-embedded in fonts.ts — no fs/network dependency
+const font400 = inter400.buffer as ArrayBuffer;
+const font900 = inter900.buffer as ArrayBuffer;
 
 function scoreFontSize(score: number): number {
   const d = String(score).length;
@@ -31,13 +23,10 @@ export async function GET(req: NextRequest) {
   const fs = scoreFontSize(score);
 
   const fonts = [
-    ...(font400 ? [{ name: 'Inter', data: font400.buffer as ArrayBuffer, weight: 400 as const, style: 'normal' as const }] : []),
-    ...(font900 ? [{ name: 'Inter', data: font900.buffer as ArrayBuffer, weight: 900 as const, style: 'normal' as const }] : []),
+    { name: 'Inter', data: font400, weight: 400 as const, style: 'normal' as const },
+    { name: 'Inter', data: font900, weight: 900 as const, style: 'normal' as const },
   ];
-
-  // Use named font only when loaded; fall back to generic sans-serif to avoid
-  // Satori attempting a Google Fonts download which can fail in serverless.
-  const font = fonts.length > 0 ? 'Inter, sans-serif' : 'sans-serif';
+  const font = 'Inter, sans-serif';
 
   return new ImageResponse(
     (
@@ -167,8 +156,6 @@ export async function GET(req: NextRequest) {
         </div>
       </div>
     ),
-    fonts.length > 0
-      ? { width: 900, height: 600, fonts }
-      : { width: 900, height: 600 },
+    { width: 900, height: 600, fonts },
   );
 }
