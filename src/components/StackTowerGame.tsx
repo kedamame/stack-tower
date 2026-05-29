@@ -16,6 +16,15 @@ const CAM_TARGET_RATIO = 0.65; // targetCamY = blocks.length*BLOCK_H + BLOCK_H -
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase = 'idle' | 'playing' | 'gameover';
 
+type Eip1193Provider = {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+};
+
+type EIP6963Wallet = {
+  info: { uuid: string; name: string; icon: string; rdns: string };
+  provider: Eip1193Provider;
+};
+
 interface Block {
   x: number;
   w: number;
@@ -76,6 +85,10 @@ export function StackTowerGame() {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [walletConnecting, setWalletConnecting] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [detectedWallets, setDetectedWallets] = useState<EIP6963Wallet[]>([]);
+  const [inFarcaster, setInFarcaster] = useState(false);
+  const selectedProviderRef = useRef<Eip1193Provider | null>(null);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   const syncSize = useCallback(() => {
@@ -297,15 +310,80 @@ export function StackTowerGame() {
     return () => ro.disconnect();
   }, [syncSize]);
 
-  // ── Connect wallet ────────────────────────────────────────────────────────
-  const handleConnectWallet = useCallback(async () => {
+  // ── EIP-6963 wallet scan (mount-time only – never on user click) ─────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const addWallet = (detail: EIP6963Wallet) => {
+      if (!detail?.info?.uuid) return;
+      setDetectedWallets(prev =>
+        prev.some(w => w.info.uuid === detail.info.uuid) ? prev : [...prev, detail],
+      );
+    };
+
+    const handler = (e: Event) => addWallet((e as CustomEvent).detail as EIP6963Wallet);
+    window.addEventListener('eip6963:announceProvider', handler);
+
+    // Also check legacy window.ethereum (e.g. Rabby in normal browser, not Farcaster iframe)
+    const win = window as {
+      ethereum?: Eip1193Provider & {
+        isRabby?: boolean;
+        isMetaMask?: boolean;
+        isCoinbaseWallet?: boolean;
+        isBraveWallet?: boolean;
+      };
+    };
+    const legacyEth = win.ethereum;
+    if (legacyEth) {
+      const name = legacyEth.isRabby
+        ? 'Rabby'
+        : legacyEth.isCoinbaseWallet
+        ? 'Coinbase Wallet'
+        : legacyEth.isBraveWallet
+        ? 'Brave Wallet'
+        : legacyEth.isMetaMask
+        ? 'MetaMask'
+        : 'Injected Wallet';
+      addWallet({
+        info: { uuid: 'legacy-window-ethereum', name, icon: '', rdns: 'window.ethereum' },
+        provider: legacyEth,
+      });
+    }
+
+    return () => window.removeEventListener('eip6963:announceProvider', handler);
+  }, []);
+
+  // ── Detect Farcaster context ───────────────────────────────────────────────
+  useEffect(() => {
+    import('@farcaster/miniapp-sdk').then(({ sdk }) => {
+      sdk.context.then(ctx => {
+        if (ctx?.user?.fid) setInFarcaster(true);
+      }).catch(() => {});
+    }).catch(() => {});
+  }, []);
+
+  // ── Connect wallet (shows selection modal only – no dispatch) ─────────────
+  const handleConnectWallet = useCallback(() => {
+    setShowWalletModal(true);
+  }, []);
+
+  // ── Connect with a specific provider ─────────────────────────────────────
+  const connectWithProvider = useCallback(async (wallet: 'farcaster' | EIP6963Wallet) => {
+    setShowWalletModal(false);
     setWalletConnecting(true);
     try {
-      const { sdk } = await import('@farcaster/miniapp-sdk');
-      const provider = sdk.wallet.ethProvider;
-      if (!provider) throw new Error('no provider');
+      let provider: Eip1193Provider;
+      if (wallet === 'farcaster') {
+        const { sdk } = await import('@farcaster/miniapp-sdk');
+        const p = sdk.wallet.ethProvider;
+        if (!p) throw new Error('no Farcaster provider');
+        provider = p as Eip1193Provider;
+      } else {
+        provider = wallet.provider;
+      }
+      selectedProviderRef.current = provider;
       const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
-      if (accounts[0]) setWalletAddress(accounts[0]);
+      if (accounts[0]) setWalletAddress(accounts[0] as string);
     } catch (err) {
       console.error(err);
     } finally {
@@ -318,8 +396,7 @@ export function StackTowerGame() {
     if (txState !== 'idle' && txState !== 'error') return;
     setTxState('pending');
     try {
-      const { sdk } = await import('@farcaster/miniapp-sdk');
-      const provider = sdk.wallet.ethProvider;
+      const provider = selectedProviderRef.current;
       if (!provider) throw new Error('no wallet');
 
       // Switch to Base mainnet (chainId 8453 = 0x2105)
@@ -356,17 +433,18 @@ export function StackTowerGame() {
       console.error(err);
       setTxState('error');
     }
-  }, [txState]);
+  }, [txState, walletAddress]);
 
   // ── Share on Farcaster ────────────────────────────────────────────────────
   const handleShare = useCallback(async () => {
     const s = G.current.score;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
+    const shareUrl = appUrl ? `${appUrl}/share?score=${s}` : '';
     try {
       const { sdk } = await import('@farcaster/miniapp-sdk');
       await sdk.actions.composeCast({
         text: `I stacked ${s} blocks in Stack Tower! Can you beat me?`,
-        embeds: appUrl ? [appUrl] : [],
+        embeds: shareUrl ? [shareUrl] : [],
       });
     } catch {
       // not in Farcaster or user closed
@@ -499,6 +577,150 @@ export function StackTowerGame() {
         </div>
       )}
 
+      {/* ── WALLET SELECTION MODAL ───────────────────────────────────────── */}
+      {showWalletModal && (
+        <div
+          style={{
+            position: 'absolute', inset: 0,
+            background: 'rgba(0,0,0,0.88)',
+            display: 'flex', flexDirection: 'column',
+            justifyContent: 'flex-end',
+            padding: '0 28px 60px',
+            zIndex: 20,
+          }}
+          onPointerDown={(e) => { e.stopPropagation(); setShowWalletModal(false); }}
+        >
+          <div
+            style={{
+              background: '#111',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 20,
+              padding: '24px 20px',
+              display: 'flex', flexDirection: 'column', gap: 0,
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              color: 'rgba(255,255,255,0.38)',
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.14em',
+              fontFamily: font, textTransform: 'uppercase' as const,
+              marginBottom: 20,
+            }}>
+              Select Wallet
+            </div>
+
+            {/* Farcaster Wallet – only shown inside Warpcast */}
+            {inFarcaster && <button
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                background: 'transparent',
+                border: 'none',
+                borderBottom: detectedWallets.length > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                padding: '14px 0',
+                cursor: 'pointer',
+                width: '100%',
+                textAlign: 'left' as const,
+                WebkitTapHighlightColor: 'transparent',
+              }}
+              onPointerDown={(e) => { e.stopPropagation(); connectWithProvider('farcaster'); }}
+            >
+              <div style={{
+                width: 40, height: 40, borderRadius: 10,
+                background: '#7c65c1',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <svg width="22" height="22" viewBox="0 0 1000 1000" fill="none">
+                  <path d="M257.778 155.556H742.222V844.444H671.111V528.889H670.414C662.554 441.677 589.258 373.333 500 373.333C410.742 373.333 337.446 441.677 329.586 528.889H328.889V844.444H257.778V155.556Z" fill="white"/>
+                  <path d="M128.889 253.333L157.778 351.111H182.222V746.667C169.949 746.667 160 756.616 160 768.889V795.556H155.556C143.283 795.556 133.333 805.505 133.333 817.778V844.444H382.222V817.778C382.222 805.505 372.273 795.556 360 795.556H355.556V768.889C355.556 756.616 345.606 746.667 333.333 746.667H306.667V253.333H128.889Z" fill="white"/>
+                  <path d="M675.556 746.667C663.283 746.667 653.333 756.616 653.333 768.889V795.556H648.889C636.616 795.556 626.667 805.505 626.667 817.778V844.444H875.556V817.778C875.556 805.505 865.606 795.556 853.333 795.556H848.889V768.889C848.889 756.616 838.94 746.667 826.667 746.667V351.111H851.111L880 253.333H702.222V746.667H675.556Z" fill="white"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: font }}>
+                  Farcaster Wallet
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12, fontFamily: font, marginTop: 2 }}>
+                  Built-in
+                </div>
+              </div>
+            </button>}
+
+            {/* EIP-6963 / window.ethereum detected wallets */}
+            {detectedWallets.map((wallet, i) => (
+              <button
+                key={wallet.info.uuid}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: i < detectedWallets.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                  padding: '14px 0',
+                  cursor: 'pointer',
+                  width: '100%',
+                  textAlign: 'left' as const,
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+                onPointerDown={(e) => { e.stopPropagation(); connectWithProvider(wallet); }}
+              >
+                <div style={{
+                  width: 40, height: 40, borderRadius: 10,
+                  overflow: 'hidden', flexShrink: 0,
+                  background: '#222',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {wallet.info.icon ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={wallet.info.icon} alt={wallet.info.name} width={40} height={40} style={{ display: 'block' }} />
+                  ) : (
+                    <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>{wallet.info.name[0]}</div>
+                  )}
+                </div>
+                <div>
+                  <div style={{ color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: font }}>
+                    {wallet.info.name}
+                  </div>
+                  <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12, fontFamily: font, marginTop: 2 }}>
+                    {wallet.info.rdns}
+                  </div>
+                </div>
+              </button>
+            ))}
+
+            {/* No wallets found notice */}
+            {!inFarcaster && detectedWallets.length === 0 && (
+              <div style={{
+                color: 'rgba(255,255,255,0.38)',
+                fontSize: 13, fontFamily: font,
+                padding: '14px 0',
+                lineHeight: 1.6,
+              }}>
+                No wallets detected.{'\n'}Install Rabby or MetaMask extension and reload.
+              </div>
+            )}
+
+            {/* Cancel */}
+            <button
+              style={{
+                marginTop: 16,
+                padding: '14px 0',
+                background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: 9999,
+                color: 'rgba(255,255,255,0.55)',
+                fontSize: 14,
+                fontFamily: font,
+                cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+              onPointerDown={(e) => { e.stopPropagation(); setShowWalletModal(false); }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── GAME OVER overlay ────────────────────────────────────────────── */}
       {phase === 'gameover' && (
         <div style={{
@@ -536,6 +758,7 @@ export function StackTowerGame() {
                   setWalletAddress(null);
                   setTxState('idle');
                   setTxHash(null);
+                  selectedProviderRef.current = null;
                 }}
               >
                 Disconnect
