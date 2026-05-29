@@ -4,6 +4,33 @@ import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
+// Module-level cache survives across requests within the same edge worker
+let font400: ArrayBuffer | null = null;
+let font900: ArrayBuffer | null = null;
+
+async function loadInterFont(weight: 400 | 900): Promise<ArrayBuffer | null> {
+  const cached = weight === 400 ? font400 : font900;
+  if (cached) return cached;
+  try {
+    // Ask Google Fonts for the CSS (Chrome UA → woff2 response)
+    const css = await fetch(
+      `https://fonts.googleapis.com/css2?family=Inter:wght@${weight}&display=swap`,
+      { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' } },
+    ).then(r => r.text());
+
+    // Extract the first woff2 URL
+    const match = css.match(/url\(([^)]+\.woff2)\)/);
+    if (!match) return null;
+
+    const data = await fetch(match[1]).then(r => r.arrayBuffer());
+    if (weight === 400) font400 = data;
+    else font900 = data;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 function scoreFontSize(score: number): number {
   const d = String(score).length;
   if (d <= 1) return 280;
@@ -16,16 +43,17 @@ export async function GET(req: NextRequest) {
   const score = parseInt(req.nextUrl.searchParams.get('score') ?? '0', 10);
   const fs = scoreFontSize(score);
 
-  const label: Record<string, string | number> = {
-    display: 'flex',
-    color: 'rgba(255,255,255,0.38)',
-    fontSize: 15,
-    fontWeight: 400,
-    letterSpacing: 3,
-    fontFamily: 'sans-serif',
-    textTransform: 'uppercase',
-    whiteSpace: 'nowrap',
-  };
+  const [f400, f900] = await Promise.all([
+    loadInterFont(400),
+    loadInterFont(900),
+  ]);
+
+  const fonts = [
+    ...(f400 ? [{ name: 'Inter', data: f400, weight: 400 as const, style: 'normal' as const }] : []),
+    ...(f900 ? [{ name: 'Inter', data: f900, weight: 900 as const, style: 'normal' as const }] : []),
+  ];
+
+  const font = 'Inter, sans-serif';
 
   return new ImageResponse(
     (
@@ -42,7 +70,7 @@ export async function GET(req: NextRequest) {
           alignItems: 'stretch',
         }}
       >
-        {/* ── Left: score info (mirrors game-over overlay) ─────────── */}
+        {/* ── Left: score info ─────────────────────────────────────── */}
         <div
           style={{
             display: 'flex',
@@ -53,8 +81,21 @@ export async function GET(req: NextRequest) {
             overflow: 'hidden',
           }}
         >
-          {/* "Final Score" label — matches game label style */}
-          <div style={label}>Final Score</div>
+          {/* "FINAL SCORE" label */}
+          <div
+            style={{
+              display: 'flex',
+              color: 'rgba(255,255,255,0.38)',
+              fontSize: 15,
+              fontWeight: 400,
+              letterSpacing: 3,
+              fontFamily: font,
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Final Score
+          </div>
 
           {/* Score number + subtitle */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -65,7 +106,7 @@ export async function GET(req: NextRequest) {
                 fontSize: fs,
                 fontWeight: 900,
                 lineHeight: 0.88,
-                fontFamily: 'sans-serif',
+                fontFamily: font,
                 letterSpacing: -4,
                 whiteSpace: 'nowrap',
               }}
@@ -78,7 +119,7 @@ export async function GET(req: NextRequest) {
                 color: 'rgba(255,255,255,0.38)',
                 fontSize: 20,
                 fontWeight: 400,
-                fontFamily: 'sans-serif',
+                fontFamily: font,
                 marginTop: 14,
                 whiteSpace: 'nowrap',
               }}
@@ -87,14 +128,14 @@ export async function GET(req: NextRequest) {
             </div>
           </div>
 
-          {/* Bottom tagline */}
+          {/* Tagline */}
           <div
             style={{
               display: 'flex',
               color: 'rgba(255,255,255,0.45)',
               fontSize: 18,
               fontWeight: 400,
-              fontFamily: 'sans-serif',
+              fontFamily: font,
               whiteSpace: 'nowrap',
             }}
           >
@@ -105,7 +146,7 @@ export async function GET(req: NextRequest) {
         {/* ── Flexible gap ─────────────────────────────────────────── */}
         <div style={{ display: 'flex', flex: 1 }} />
 
-        {/* ── Right: app label + tower illustration ────────────────── */}
+        {/* ── Right: app label + tower ──────────────────────────────── */}
         <div
           style={{
             display: 'flex',
@@ -116,7 +157,6 @@ export async function GET(req: NextRequest) {
             flexShrink: 0,
           }}
         >
-          {/* App name */}
           <div
             style={{
               display: 'flex',
@@ -124,7 +164,7 @@ export async function GET(req: NextRequest) {
               fontSize: 13,
               fontWeight: 400,
               letterSpacing: 6,
-              fontFamily: 'sans-serif',
+              fontFamily: font,
               textTransform: 'uppercase',
               whiteSpace: 'nowrap',
             }}
@@ -132,14 +172,7 @@ export async function GET(req: NextRequest) {
             Stack Tower
           </div>
 
-          {/* Tower blocks (narrow at top → wide at bottom) */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-end',
-            }}
-          >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
             <div style={{ display: 'flex', width: 42,  height: 30, background: '#FFFFFF', marginBottom: 3 }} />
             <div style={{ display: 'flex', width: 70,  height: 30, background: '#D0D0D0', marginBottom: 3 }} />
             <div style={{ display: 'flex', width: 100, height: 30, background: '#FFFFFF', marginBottom: 3 }} />
@@ -150,6 +183,6 @@ export async function GET(req: NextRequest) {
         </div>
       </div>
     ),
-    { width: 900, height: 600 },
+    { width: 900, height: 600, fonts },
   );
 }
