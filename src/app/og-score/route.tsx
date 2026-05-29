@@ -1,28 +1,22 @@
 // Farcaster embed image — 900x600 (3:2), matches in-game game-over aesthetic
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 export const runtime = 'nodejs';
-export const maxDuration = 15;
+export const maxDuration = 10;
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-
-// Module-level cache (per Node.js process)
-let font400: ArrayBuffer | null = null;
-let font900: ArrayBuffer | null = null;
-
-async function loadFont(weight: 400 | 900): Promise<ArrayBuffer | null> {
-  if (weight === 400 && font400) return font400;
-  if (weight === 900 && font900) return font900;
-  try {
-    const data = await fetch(`${APP_URL}/fonts/inter-${weight}.woff2`).then(r => r.arrayBuffer());
-    if (weight === 400) font400 = data;
-    else font900 = data;
-    return data;
-  } catch {
-    return null;
-  }
-}
+// Read fonts synchronously at module init — cached for process lifetime.
+// public/fonts/ is included in this function's bundle via outputFileTracingIncludes.
+const font400 = (() => {
+  try { return readFileSync(join(process.cwd(), 'public/fonts/inter-400.woff2')); }
+  catch { return null; }
+})();
+const font900 = (() => {
+  try { return readFileSync(join(process.cwd(), 'public/fonts/inter-900.woff2')); }
+  catch { return null; }
+})();
 
 function scoreFontSize(score: number): number {
   const d = String(score).length;
@@ -36,14 +30,14 @@ export async function GET(req: NextRequest) {
   const score = parseInt(req.nextUrl.searchParams.get('score') ?? '0', 10);
   const fs = scoreFontSize(score);
 
-  const [f400, f900] = await Promise.all([loadFont(400), loadFont(900)]);
-
   const fonts = [
-    ...(f400 ? [{ name: 'Inter', data: f400, weight: 400 as const, style: 'normal' as const }] : []),
-    ...(f900 ? [{ name: 'Inter', data: f900, weight: 900 as const, style: 'normal' as const }] : []),
+    ...(font400 ? [{ name: 'Inter', data: font400.buffer as ArrayBuffer, weight: 400 as const, style: 'normal' as const }] : []),
+    ...(font900 ? [{ name: 'Inter', data: font900.buffer as ArrayBuffer, weight: 900 as const, style: 'normal' as const }] : []),
   ];
 
-  const font = 'Inter, sans-serif';
+  // Use named font only when loaded; fall back to generic sans-serif to avoid
+  // Satori attempting a Google Fonts download which can fail in serverless.
+  const font = fonts.length > 0 ? 'Inter, sans-serif' : 'sans-serif';
 
   return new ImageResponse(
     (
@@ -173,6 +167,8 @@ export async function GET(req: NextRequest) {
         </div>
       </div>
     ),
-    { width: 900, height: 600, fonts },
+    fonts.length > 0
+      ? { width: 900, height: 600, fonts }
+      : { width: 900, height: 600 },
   );
 }
