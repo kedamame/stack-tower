@@ -19,7 +19,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
-      images: [{ url: ogImage, width: 1200, height: 630 }],
+      images: [{ url: ogImage, width: 900, height: 600 }],
       url: `${APP_URL}/share?score=${score}`,
     },
     twitter: {

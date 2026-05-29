@@ -1,59 +1,43 @@
+// Farcaster embed image (3:2 = 900x600) — same ratio as /opengraph-image
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
-// W=1200 H=630  pad T/B=72 L/R=80  → content 1040×486
-const PL = 80;
-const PT = 72;
-const W = 1200;
-const H = 630;
-const TOWER_W = 340; // reserved for right tower column
-const LEFT_W = W - PL * 2 - TOWER_W - 48; // 48 = gap  → 612
-
 function scoreFontSize(score: number): number {
   const d = String(score).length;
-  if (d <= 1) return 300;
-  if (d <= 2) return 230;
-  if (d <= 3) return 185;
-  return 150;
+  if (d <= 1) return 240;
+  if (d <= 2) return 190;
+  if (d <= 3) return 150;
+  return 120;
 }
 
 export async function GET(req: NextRequest) {
   const score = parseInt(req.nextUrl.searchParams.get('score') ?? '0', 10);
   const fs = scoreFontSize(score);
 
-  const BLOCKS: { w: number; h: number }[] = [
-    { w: 80,  h: 40 },
-    { w: 120, h: 40 },
-    { w: 160, h: 40 },
-    { w: 200, h: 40 },
-    { w: 245, h: 40 },
-    { w: 290, h: 40 },
-  ];
-
   return new ImageResponse(
     (
       <div
         style={{
-          width: W,
-          height: H,
+          width: '100%',
+          height: '100%',
           display: 'flex',
           background: '#000000',
-          paddingTop: PT,
-          paddingBottom: PT,
-          paddingLeft: PL,
-          paddingRight: PL,
+          paddingTop: 56,
+          paddingBottom: 56,
+          paddingLeft: 64,
+          paddingRight: 64,
           alignItems: 'stretch',
         }}
       >
-        {/* ── Left column ─────────────────────────────────────────────── */}
+        {/* ── Left column: score ──────────────────────────────────────── */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            width: LEFT_W,
+            width: 460,
             flexShrink: 0,
             overflow: 'hidden',
           }}
@@ -63,7 +47,7 @@ export async function GET(req: NextRequest) {
             style={{
               display: 'flex',
               color: 'rgba(255,255,255,0.35)',
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: 700,
               letterSpacing: 8,
               fontFamily: 'monospace',
@@ -79,7 +63,7 @@ export async function GET(req: NextRequest) {
               style={{
                 display: 'flex',
                 color: 'rgba(255,255,255,0.35)',
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: 700,
                 letterSpacing: 8,
                 fontFamily: 'monospace',
@@ -97,7 +81,7 @@ export async function GET(req: NextRequest) {
                 fontWeight: 900,
                 lineHeight: 1,
                 fontFamily: 'serif',
-                letterSpacing: -4,
+                letterSpacing: -3,
                 whiteSpace: 'nowrap',
               }}
             >
@@ -107,11 +91,11 @@ export async function GET(req: NextRequest) {
               style={{
                 display: 'flex',
                 color: 'rgba(255,255,255,0.35)',
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: 700,
                 letterSpacing: 8,
                 fontFamily: 'monospace',
-                marginTop: 14,
+                marginTop: 12,
                 whiteSpace: 'nowrap',
               }}
             >
@@ -124,7 +108,7 @@ export async function GET(req: NextRequest) {
             style={{
               display: 'flex',
               color: 'rgba(255,255,255,0.45)',
-              fontSize: 20,
+              fontSize: 18,
               fontFamily: 'monospace',
               whiteSpace: 'nowrap',
             }}
@@ -134,7 +118,7 @@ export async function GET(req: NextRequest) {
         </div>
 
         {/* ── Gap ─────────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', width: 48, flexShrink: 0 }} />
+        <div style={{ display: 'flex', flex: 1 }} />
 
         {/* ── Right column: tower ──────────────────────────────────────── */}
         <div
@@ -143,32 +127,19 @@ export async function GET(req: NextRequest) {
             flexDirection: 'column',
             alignItems: 'flex-end',
             justifyContent: 'flex-end',
-            width: TOWER_W,
+            width: 248,
             flexShrink: 0,
           }}
         >
-          <div style={{ display: 'flex' }}>
-            {/* top block */}
-            <div style={{ display: 'flex', width: BLOCKS[0].w, height: BLOCKS[0].h, background: '#FFFFFF', marginBottom: 3 }} />
-          </div>
-          <div style={{ display: 'flex' }}>
-            <div style={{ display: 'flex', width: BLOCKS[1].w, height: BLOCKS[1].h, background: '#CCCCCC', marginBottom: 3 }} />
-          </div>
-          <div style={{ display: 'flex' }}>
-            <div style={{ display: 'flex', width: BLOCKS[2].w, height: BLOCKS[2].h, background: '#FFFFFF', marginBottom: 3 }} />
-          </div>
-          <div style={{ display: 'flex' }}>
-            <div style={{ display: 'flex', width: BLOCKS[3].w, height: BLOCKS[3].h, background: '#CCCCCC', marginBottom: 3 }} />
-          </div>
-          <div style={{ display: 'flex' }}>
-            <div style={{ display: 'flex', width: BLOCKS[4].w, height: BLOCKS[4].h, background: '#FFFFFF', marginBottom: 3 }} />
-          </div>
-          <div style={{ display: 'flex' }}>
-            <div style={{ display: 'flex', width: BLOCKS[5].w, height: BLOCKS[5].h, background: '#CCCCCC' }} />
-          </div>
+          <div style={{ display: 'flex', width: 50,  height: 34, background: '#FFFFFF', marginBottom: 3 }} />
+          <div style={{ display: 'flex', width: 82,  height: 34, background: '#CCCCCC', marginBottom: 3 }} />
+          <div style={{ display: 'flex', width: 114, height: 34, background: '#FFFFFF', marginBottom: 3 }} />
+          <div style={{ display: 'flex', width: 148, height: 34, background: '#CCCCCC', marginBottom: 3 }} />
+          <div style={{ display: 'flex', width: 182, height: 34, background: '#FFFFFF', marginBottom: 3 }} />
+          <div style={{ display: 'flex', width: 220, height: 34, background: '#CCCCCC' }} />
         </div>
       </div>
     ),
-    { width: W, height: H },
+    { width: 900, height: 600 },
   );
 }
