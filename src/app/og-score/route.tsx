@@ -1,27 +1,8 @@
 // Farcaster embed image — 900x600 (3:2), matches in-game game-over aesthetic
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { readFile } from 'fs/promises';
 
-export const runtime = 'nodejs';
-export const maxDuration = 10;
-
-// Cache font ArrayBuffers per process instance
-let font400Cache: ArrayBuffer | undefined;
-let font900Cache: ArrayBuffer | undefined;
-
-async function loadFonts() {
-  if (!font400Cache) {
-    // new URL('./file', import.meta.url) causes webpack to bundle the file
-    const buf = await readFile(new URL('./inter-400.woff2', import.meta.url));
-    font400Cache = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
-  }
-  if (!font900Cache) {
-    const buf = await readFile(new URL('./inter-900.woff2', import.meta.url));
-    font900Cache = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
-  }
-  return { font400: font400Cache, font900: font900Cache };
-}
+export const runtime = 'edge';
 
 function scoreFontSize(score: number): number {
   const d = String(score).length;
@@ -34,13 +15,6 @@ function scoreFontSize(score: number): number {
 export async function GET(req: NextRequest) {
   const score = parseInt(req.nextUrl.searchParams.get('score') ?? '0', 10);
   const fs = scoreFontSize(score);
-
-  const { font400, font900 } = await loadFonts();
-  const fonts = [
-    { name: 'Inter', data: font400, weight: 400 as const, style: 'normal' as const },
-    { name: 'Inter', data: font900, weight: 900 as const, style: 'normal' as const },
-  ];
-  const font = 'Inter, sans-serif';
 
   return new ImageResponse(
     (
@@ -68,7 +42,6 @@ export async function GET(req: NextRequest) {
             overflow: 'hidden',
           }}
         >
-          {/* "FINAL SCORE" label */}
           <div
             style={{
               display: 'flex',
@@ -76,7 +49,6 @@ export async function GET(req: NextRequest) {
               fontSize: 15,
               fontWeight: 400,
               letterSpacing: 3,
-              fontFamily: font,
               textTransform: 'uppercase',
               whiteSpace: 'nowrap',
             }}
@@ -84,7 +56,6 @@ export async function GET(req: NextRequest) {
             Final Score
           </div>
 
-          {/* Score number + subtitle */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div
               style={{
@@ -93,7 +64,6 @@ export async function GET(req: NextRequest) {
                 fontSize: fs,
                 fontWeight: 900,
                 lineHeight: 0.88,
-                fontFamily: font,
                 letterSpacing: -4,
                 whiteSpace: 'nowrap',
               }}
@@ -106,7 +76,6 @@ export async function GET(req: NextRequest) {
                 color: 'rgba(255,255,255,0.38)',
                 fontSize: 20,
                 fontWeight: 400,
-                fontFamily: font,
                 marginTop: 14,
                 whiteSpace: 'nowrap',
               }}
@@ -115,14 +84,12 @@ export async function GET(req: NextRequest) {
             </div>
           </div>
 
-          {/* Tagline */}
           <div
             style={{
               display: 'flex',
               color: 'rgba(255,255,255,0.45)',
               fontSize: 18,
               fontWeight: 400,
-              fontFamily: font,
               whiteSpace: 'nowrap',
             }}
           >
@@ -130,10 +97,10 @@ export async function GET(req: NextRequest) {
           </div>
         </div>
 
-        {/* ── Flexible gap ─────────────────────────────────────────── */}
+        {/* ── Gap ─────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flex: 1 }} />
 
-        {/* ── Right: app label + tower ──────────────────────────────── */}
+        {/* ── Right: app label + tower ─────────────────────────────── */}
         <div
           style={{
             display: 'flex',
@@ -151,7 +118,6 @@ export async function GET(req: NextRequest) {
               fontSize: 13,
               fontWeight: 400,
               letterSpacing: 6,
-              fontFamily: font,
               textTransform: 'uppercase',
               whiteSpace: 'nowrap',
             }}
@@ -170,6 +136,6 @@ export async function GET(req: NextRequest) {
         </div>
       </div>
     ),
-    { width: 900, height: 600, fonts },
+    { width: 900, height: 600 },
   );
 }
