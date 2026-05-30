@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
             style={{
               display: 'flex',
               color: 'rgba(255,255,255,0.38)',
-              fontSize: 14,
+              fontSize: 18,
               fontWeight: 700,
               letterSpacing: 3,
               textTransform: 'uppercase',
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
               style={{
                 display: 'flex',
                 color: 'rgba(255,255,255,0.38)',
-                fontSize: 18,
+                fontSize: 22,
                 fontWeight: 400,
                 marginTop: 18,
                 whiteSpace: 'nowrap',
@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
             style={{
               display: 'flex',
               color: 'rgba(255,255,255,0.35)',
-              fontSize: 12,
+              fontSize: 15,
               fontWeight: 400,
               letterSpacing: 5,
               textTransform: 'uppercase',
@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
             style={{
               display: 'flex',
               color: 'rgba(255,255,255,0.40)',
-              fontSize: 16,
+              fontSize: 20,
               fontWeight: 400,
               whiteSpace: 'nowrap',
             }}
