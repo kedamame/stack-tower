@@ -5,24 +5,8 @@ import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
-// Inter Black (900) — cached per edge function instance.
-// jsDelivr is a stable CDN; fetch() is a standard Web API in edge runtime.
-let interBlack: ArrayBuffer | undefined;
-
-async function loadInterBlack(): Promise<ArrayBuffer | undefined> {
-  if (interBlack) return interBlack;
-  try {
-    const res = await fetch(
-      'https://cdn.jsdelivr.net/npm/@fontsource/inter@5/files/inter-latin-900-normal.woff2',
-      { signal: AbortSignal.timeout(4000) },
-    );
-    if (!res.ok) return undefined;
-    interBlack = await res.arrayBuffer();
-    return interBlack;
-  } catch {
-    return undefined;
-  }
-}
+// Inter 900 embedded as base64 — no fetch, no Buffer, pure Web API (atob + Uint8Array)
+import { inter900 } from './fonts';
 
 // Scale game CSS (clamp 96-160px at ~390px viewport) → 900px OG canvas
 // Game ratio: ~155px score in ~390px width = 40%
@@ -40,8 +24,7 @@ export async function GET(req: NextRequest) {
   const fz = scoreFontSize(score);
   const ls = Math.round(fz * -0.03); // letterSpacing: -0.03em
 
-  const font900Data = await loadInterBlack();
-  const scoreFont = font900Data ? 'Inter, sans-serif' : 'sans-serif';
+  const scoreFont = 'Inter, sans-serif';
 
   return new ImageResponse(
     (
@@ -169,8 +152,6 @@ export async function GET(req: NextRequest) {
         </div>
       </div>
     ),
-    font900Data
-      ? { width: 900, height: 600, fonts: [{ name: 'Inter', data: font900Data, weight: 900 as const, style: 'normal' as const }] }
-      : { width: 900, height: 600 },
+    { width: 900, height: 600, fonts: [{ name: 'Inter', data: inter900, weight: 900 as const, style: 'normal' as const }] },
   );
 }
