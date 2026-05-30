@@ -5,6 +5,25 @@ import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
+// Inter Black (900) — cached per edge function instance.
+// jsDelivr is a stable CDN; fetch() is a standard Web API in edge runtime.
+let interBlack: ArrayBuffer | undefined;
+
+async function loadInterBlack(): Promise<ArrayBuffer | undefined> {
+  if (interBlack) return interBlack;
+  try {
+    const res = await fetch(
+      'https://cdn.jsdelivr.net/npm/@fontsource/inter@5/files/inter-latin-900-normal.woff2',
+      { signal: AbortSignal.timeout(4000) },
+    );
+    if (!res.ok) return undefined;
+    interBlack = await res.arrayBuffer();
+    return interBlack;
+  } catch {
+    return undefined;
+  }
+}
+
 // Scale game CSS (clamp 96-160px at ~390px viewport) → 900px OG canvas
 // Game ratio: ~155px score in ~390px width = 40%
 // OG: 40% of 756px content = ~302px → round per digit count
@@ -19,8 +38,10 @@ function scoreFontSize(score: number): number {
 export async function GET(req: NextRequest) {
   const score = parseInt(req.nextUrl.searchParams.get('score') ?? '0', 10);
   const fz = scoreFontSize(score);
-  // letterSpacing: -0.03em scaled to fz
-  const ls = Math.round(fz * -0.03);
+  const ls = Math.round(fz * -0.03); // letterSpacing: -0.03em
+
+  const font900Data = await loadInterBlack();
+  const scoreFont = font900Data ? 'Inter, sans-serif' : 'sans-serif';
 
   return new ImageResponse(
     (
@@ -73,6 +94,7 @@ export async function GET(req: NextRequest) {
                 fontWeight: 900,
                 lineHeight: 0.85,
                 letterSpacing: ls,
+                fontFamily: scoreFont,
                 whiteSpace: 'nowrap',
               }}
             >
@@ -147,6 +169,8 @@ export async function GET(req: NextRequest) {
         </div>
       </div>
     ),
-    { width: 900, height: 600 },
+    font900Data
+      ? { width: 900, height: 600, fonts: [{ name: 'Inter', data: font900Data, weight: 900 as const, style: 'normal' as const }] }
+      : { width: 900, height: 600 },
   );
 }
