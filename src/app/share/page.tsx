@@ -9,7 +9,7 @@ export async function generateMetadata({
   searchParams: { score?: string };
 }): Promise<Metadata> {
   const score = parseInt(searchParams.score ?? '0', 10);
-  const ogImage = `${APP_URL}/og-score?score=${score}&v=7`;
+  const ogImage = `${APP_URL}/og-score?score=${score}&v=8`;
   const title = `I stacked ${score} blocks in Stack Tower!`;
   const description = `Can you beat my score of ${score}? Play Stack Tower on Farcaster.`;
 
